@@ -1,0 +1,81 @@
+# A protoAgent plugin BUNDLE (ADR 0040) — the Design System Engineer archetype.
+# This is the DEDICATED public bundle repo the archetype catalog installs
+# (protoAgent's archetype-catalog.json `design-system` row); the persona ships as
+# protoAgent's `design-system` soul preset. Generalized from the protoLabs.studio
+# fleet's frontend engineer ("matt", frontend-bundle — that repo stays the
+# fleet-specific instance; this stack is the portable archetype).
+#
+# Install (onto any host):  python -m server plugin install <this-repo-url>
+#
+# TARGET-REPO SETUP (required, per-host): the archetype ships UNBOUND. After
+# install: (1) point the design-system plugin at YOUR DS repo (Settings ▸ Plugins ▸
+# Design System — repo/ref/paths; the drift-watch cron is on by default, blank it
+# to disable); (2) give the github plugin that repo (and set `write: true` only if
+# the agent should open PRs); (3) register a builder delegate if you want the
+# direct-and-QA flow — the agent is a DIRECTOR, not a typist: it briefs a builder,
+# QAs the result, and opens/reviews PRs; it has no shell by design. A commented
+# `component-author` example ships below.
+#
+# PIN LIFECYCLE (ADR 0049): members are pinned to release TAGS and only move through
+# a passing verify (scripts/ + .github/workflows/verify-bundle.yml). Keep member
+# entries on ONE line — scripts/check_bundle_updates.py rewrites the `ref:` in place.
+
+id: design-system
+name: Design System Engineer
+description: >-
+  A design-system + frontend + accessibility engineer. It reads the design system
+  LIVE (tokens, component inventory, visual-identity rules — never a stale copy),
+  lints changes against the token vocabulary, watches for drift, and turns design
+  direction into focused, reviewed pull requests — directing builder delegates and
+  QA-ing their output rather than hand-coding. Accessibility is a requirement, not
+  a nice-to-have. Humans merge.
+
+# The core version this exact pin set was last verified against (ADR 0049). The
+# verify workflow checks out this protoAgent ref for the smoke — bump on re-verify.
+verified_against: 0.110.0
+
+plugins:
+  - { id: delegates, builtin: true }                                                    # builder delegates — the agent directs, they build
+  - { id: artifact,  builtin: true }                                                    # generative UI — how prototypes are conveyed
+  - { id: design-system, url: https://github.com/protoLabsAI/design-system-plugin, ref: v0.2.0 }
+  - { id: github,        url: https://github.com/protoLabsAI/github-plugin,        ref: v0.3.0 }
+
+enabled: [delegates, artifact, design-system, github]   # suggested turn-on list (you apply it)
+config:                                              # recommended defaults (you apply them)
+  # The engineer directs and QAs; it does not shell out or commit directly — PRs are
+  # its only write path into a codebase, and builders do the authoring.
+  filesystem:
+    allow_run: false
+  tools:
+    disabled: [run_command]
+  # Guarded self-persona editor (ADR 0081): edit_soul snapshots to soul-history.
+  soul:
+    self_edit_enabled: true
+  github:
+    write: true            # PR-opening on the DS repo; merges stay human. Bind `repos:` per-host.
+  # design-system plugin: bind repo/ref/paths per-host in Settings — defaults point at
+  # the reference protoContent layout (packages/design-system/dist/tokens.json,
+  # packages/ui/src, docs/reference/visual-identity.md).
+  #
+  # Example builder delegate (uncomment + point at your gateway):
+  # delegates:
+  #   - name: component-author
+  #     type: openai
+  #     url: http://your-gateway:4000/v1
+  #     model: your/reasoning-model
+  #     api_key_env: OPENAI_API_KEY
+  #     max_tokens: 8000
+  #     temperature: 0.2
+  #     description: >-
+  #       Turn an approved prototype/design intent into a production component for your
+  #       UI library — returns the component + its Storybook story, ready to review + PR.
+
+# Agent archetype (ADR 0042) — presents this bundle as a "Design System Engineer"
+# agent type in the new-agent picker. Additive metadata.
+archetype:
+  label: Design System Engineer
+  icon: Component
+  blurb: >-
+    Owns a design system end to end — reads tokens and components live, watches for
+    drift, enforces accessibility, and ships every change as a reviewed PR by
+    directing builder delegates. Humans merge.
