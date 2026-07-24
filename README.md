@@ -37,6 +37,3 @@ python -m server plugin install https://github.com/protoLabsAI/design-system-sta
 
 Pins move through release tags only (ADR 0049) — `scripts/check_bundle_updates.py`
 proposes bumps, `.github/workflows/verify-bundle.yml` gates them.
-
-Lineage: generalized from the protoLabs.studio fleet's frontend engineer
-(`frontend-bundle`, private) — that repo remains the fleet-specific instance.

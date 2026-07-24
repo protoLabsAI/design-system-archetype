@@ -1,9 +1,8 @@
 # A protoAgent plugin BUNDLE (ADR 0040) — the Design System Engineer archetype.
 # This is the DEDICATED public bundle repo the archetype catalog installs
 # (protoAgent's archetype-catalog.json `design-system` row); the persona ships as
-# protoAgent's `design-system` soul preset. Generalized from the protoLabs.studio
-# fleet's frontend engineer ("matt", frontend-bundle — that repo stays the
-# fleet-specific instance; this stack is the portable archetype).
+# protoAgent's `design-system` soul preset. First-party archetype, owned and
+# developed by the protoAgent engineering-team pipeline (not a fleet artifact).
 #
 # Install (onto any host):  python -m server plugin install <this-repo-url>
 #
