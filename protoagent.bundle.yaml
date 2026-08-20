@@ -19,7 +19,7 @@
 # a passing verify (scripts/ + .github/workflows/verify-bundle.yml). Keep member
 # entries on ONE line — scripts/check_bundle_updates.py rewrites the `ref:` in place.
 
-id: design-system
+id: design-system-archetype
 name: Design System Engineer
 description: >-
   A design-system + frontend + accessibility engineer. It reads the design system
