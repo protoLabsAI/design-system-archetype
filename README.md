@@ -1,4 +1,4 @@
-# design-system-stack
+# design-system-archetype
 
 The **Design System Engineer** archetype bundle for [protoAgent](https://github.com/protoLabsAI/protoAgent) —
 a design-system + frontend + accessibility engineer that reads the design system
@@ -19,7 +19,7 @@ path, `edit_soul` history on.
 ## Install
 
 ```
-python -m server plugin install https://github.com/protoLabsAI/design-system-stack
+python -m server plugin install https://github.com/protoLabsAI/design-system-archetype
 ```
 
 — or pick **Design System Engineer** in the new-agent picker; it installs this bundle.
