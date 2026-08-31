@@ -31,13 +31,13 @@ description: >-
 
 # The core version this exact pin set was last verified against (ADR 0049). The
 # verify workflow checks out this protoAgent ref for the smoke — bump on re-verify.
-verified_against: 0.110.0
+verified_against: 0.155.3
 
 plugins:
   - { id: delegates, builtin: true }                                                    # builder delegates — the agent directs, they build
   - { id: artifact,  builtin: true }                                                    # generative UI — how prototypes are conveyed
   - { id: design-system, url: https://github.com/protoLabsAI/design-system-plugin, ref: v0.5.0 }
-  - { id: github,        url: https://github.com/protoLabsAI/github-plugin,        ref: v0.3.0 }
+  - { id: github,        url: https://github.com/protoLabsAI/github-plugin,        ref: v0.7.0 }
 
 enabled: [delegates, artifact, design-system, github]   # suggested turn-on list (you apply it)
 config:                                              # recommended defaults (you apply them)
