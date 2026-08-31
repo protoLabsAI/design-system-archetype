@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
-"""Pin-bump checker for a bundle manifest (ADR 0049). Zero deps — stdlib + git.
+"""Pin-bump checker for a bundle manifest (ADR 0049, as amended 2026-08-31).
 
-For every member pinned to a semver TAG (`ref: vX.Y.Z`), ls-remote the repo's tags
-and rewrite the manifest's `ref:` to the newest tag in place — comment-preserving
-(plain text substitution; member entries must stay on one line, see the manifest).
-Raw-SHA pins and `builtin:` members are left alone by design.
+A member pin is a bounded FLOOR, not an exact pin: protoAgent's installer already
+ls-remotes each release-tag-pinned member and adopts the newest COMPATIBLE release
+(caret semantics — the boundary is the leftmost non-zero component, so for the 0.x
+versions this fleet uses, the MINOR).
+
+So this script deliberately does NOT chase compatible releases any more. Rewriting
+`ref: v0.7.0` to `v0.7.1` produced a PR, an approval click and a merge to write down
+a value the installer computes on its own — churn with no effect on what installs.
+
+It now reports only what actually needs a human: a member whose newest release is
+OUTSIDE the compatible range. Adopting that is a real decision (it may be breaking),
+so the ref is rewritten and the verify job gates the result.
 
     python3 scripts/check_bundle_updates.py protoagent.bundle.yaml
 
-Prints one `bump: <id> <old> -> <new>` line per change. Exit 0 with changes written
-(the workflow turns a dirty tree into a PR), exit 0 untouched when current.
+Prints `bump: <id> <old> -> <new>` per out-of-range member (workflow turns the dirty
+tree into a PR), and `compatible: <id> …` for releases the installer picks up by
+itself. Raw-SHA pins and `builtin:` members are left alone by design.
 """
 
 from __future__ import annotations
@@ -47,6 +56,23 @@ def latest_tag(url: str) -> str | None:
     return max(tags, key=_semver_key) if tags else None
 
 
+def is_compatible(pinned: str, candidate: str) -> bool:
+    """Caret semantics — mirrors ``graph.plugins.installer.is_compatible_upgrade``.
+
+    The boundary is the leftmost NON-ZERO component. That distinction is the whole point
+    for this fleet: every plugin is 0.x, where a minor bump is where breaking changes land,
+    so bounding on the major alone would be no bound at all.
+    """
+    a, b = _semver_key(pinned), _semver_key(candidate)
+    if b < a:
+        return False
+    if a[0] != 0:
+        return a[0] == b[0]
+    if a[1] != 0:
+        return b[0] == 0 and a[1] == b[1]
+    return b[0] == 0 and b[1] == 0
+
+
 def main(manifest_path: str) -> int:
     path = Path(manifest_path)
     lines = path.read_text().splitlines(keepends=True)
@@ -56,14 +82,19 @@ def main(manifest_path: str) -> int:
         if not m or not _SEMVER_TAG.match(m["ref"]):
             continue  # builtin, raw-SHA pin, or not a member line — leave alone
         newest = latest_tag(m["url"])
-        if newest and _semver_key(newest) > _semver_key(m["ref"]):
-            lines[i] = line.replace(f"ref: {m['ref']}", f"ref: {newest}")
-            print(f"bump: {m['id']} {m['ref']} -> {newest}")
-            changed = True
+        if not newest or _semver_key(newest) <= _semver_key(m["ref"]):
+            continue
+        if is_compatible(m["ref"], newest):
+            # The installer adopts this by itself — bumping the manifest changes nothing.
+            print(f"compatible: {m['id']} {m['ref']} -> {newest} (adopted at install; no bump needed)")
+            continue
+        lines[i] = line.replace(f"ref: {m['ref']}", f"ref: {newest}")
+        print(f"bump: {m['id']} {m['ref']} -> {newest}  [OUT OF RANGE — review before merging]")
+        changed = True
     if changed:
         path.write_text("".join(lines))
     else:
-        print("all tag pins current")
+        print("no out-of-range member releases — nothing to decide")
     return 0
 
 
