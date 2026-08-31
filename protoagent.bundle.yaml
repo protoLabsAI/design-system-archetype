@@ -15,9 +15,15 @@
 # QAs the result, and opens/reviews PRs; it has no shell by design. A commented
 # `component-author` example ships below.
 #
-# PIN LIFECYCLE (ADR 0049): members are pinned to release TAGS and only move through
-# a passing verify (scripts/ + .github/workflows/verify-bundle.yml). Keep member
-# entries on ONE line — scripts/check_bundle_updates.py rewrites the `ref:` in place.
+# PIN LIFECYCLE (ADR 0049, amended 2026-08-31): a member `ref:` is a bounded FLOOR, not
+# an exact pin. protoAgent's installer ls-remotes each member and adopts the newest
+# COMPATIBLE release by itself — caret semantics, so for the 0.x versions here the
+# boundary is the MINOR (v0.7.0 picks up v0.7.9, never v0.8.0). A pin therefore reads as
+# "this version or a compatible newer one", and there is no reason to bump it for a
+# member's patch release: the installer already resolves to the same thing.
+# check_bundle_updates.py only proposes a bump when a member releases OUTSIDE the range —
+# a real decision, gated by .github/workflows/verify-bundle.yml. Keep member entries on
+# ONE line — the script rewrites the `ref:` in place.
 
 id: design-system-archetype
 name: Design System Engineer
