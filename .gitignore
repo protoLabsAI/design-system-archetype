@@ -1,0 +1,7 @@
+# Python bytecode caches — never commit these. The test suite's "forbidden model
+# family" guard scans repo files, and CPython constant-folds that test's split-string
+# needle into a single literal inside the compiled .pyc; committing bytecode would leak
+# the term and trip a plain `grep -ri` for it over the repo.
+__pycache__/
+*.py[cod]
+.pytest_cache/

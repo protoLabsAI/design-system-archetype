@@ -15,10 +15,29 @@
 # QAs the result, and opens/reviews PRs; it has no shell by design. A commented
 # `component-author` example ships below.
 #
+# TWO-BOARD MODEL (recommended setup): run the design system and its consuming app as
+# two PEER PM boards, not one. THIS agent's project_board owns the DS repos (the design
+# system + its plugin/library packages) — it reads them live, lints, drift-watches, and
+# opens PRs there. A separate peer PM agent, protoEngineer, owns the consuming APP repo
+# and is reached as an a2a delegate (commented `protoEngineer` example under `delegates:`
+# below, alongside the builder delegate). The split keeps each board authoritative over
+# its own repos: this agent never opens app-repo PRs directly — it delegates app-side
+# adoption to protoEngineer. When an app change must wait on a design-system release, gate
+# the consumer card with `waits_for: npm:<pkg>@contains:<owner>/<repo>@<card-id>` — the
+# consumer only unblocks once the published package actually contains that DS card's merge.
+#
+# ONBOARDING (ds_audit_repo needs this): the repo auditor ONLY audits checkouts that live
+# under the onboarding ROOT or an explicitly registered project — never an arbitrary path
+# on the host. Set `onboarding.allow` to the repos it may clone (e.g. github.com/<your-org>/*)
+# and `onboarding.root` to a directory INSIDE the agent workspace (e.g. <workspace>/projects).
+# The root MUST NEVER be ~/dev and MUST NEVER be your home directory: the auditor treats
+# everything under root as disposable working copies it clones into and re-syncs. A commented
+# `onboarding:` example ships below.
+#
 # PIN LIFECYCLE (ADR 0049, amended 2026-08-31): a member `ref:` is a bounded FLOOR, not
 # an exact pin. protoAgent's installer ls-remotes each member and adopts the newest
 # COMPATIBLE release by itself — caret semantics, so for the 0.x versions here the
-# boundary is the MINOR (v0.7.0 picks up v0.7.9, never v0.8.0). A pin therefore reads as
+# boundary is the MINOR (v0.9.0 picks up v0.9.9, never v0.10.0). A pin therefore reads as
 # "this version or a compatible newer one", and there is no reason to bump it for a
 # member's patch release: the installer already resolves to the same thing.
 # check_bundle_updates.py only proposes a bump when a member releases OUTSIDE the range —
@@ -37,15 +56,17 @@ description: >-
 
 # The core version this exact pin set was last verified against (ADR 0049). The
 # verify workflow checks out this protoAgent ref for the smoke — bump on re-verify.
-verified_against: 0.155.3
+verified_against: 0.184.1
 
 plugins:
   - { id: delegates, builtin: true }                                                    # builder delegates — the agent directs, they build
   - { id: artifact,  builtin: true }                                                    # generative UI — how prototypes are conveyed
-  - { id: design-system, url: https://github.com/protoLabsAI/design-system-plugin, ref: v0.7.0 }
+  - { id: agent_browser, builtin: true }                                                # in-page probe — the auditing-a-site / theme_probe_script flows run here
+  - { id: execute_code,  builtin: true }                                                # sandboxed runs — token extraction + audit scripts, no shell needed
+  - { id: design-system, url: https://github.com/protoLabsAI/design-system-plugin, ref: v0.9.0 }
   - { id: github,        url: https://github.com/protoLabsAI/github-plugin,        ref: v0.7.0 }
 
-enabled: [delegates, artifact, design-system, github]   # suggested turn-on list (you apply it)
+enabled: [delegates, artifact, agent_browser, execute_code, design-system, github]   # suggested turn-on list (you apply it)
 config:                                              # recommended defaults (you apply them)
   # The engineer directs and QAs; it does not shell out or commit directly — PRs are
   # its only write path into a codebase, and builders do the authoring.
@@ -58,9 +79,24 @@ config:                                              # recommended defaults (you
     self_edit_enabled: true
   github:
     write: true            # PR-opening on the DS repo; merges stay human. Bind `repos:` per-host.
+  # execute_code sandbox defaults: cap a probe/audit run's output so a noisy script
+  # can't flood context, and bound each run so an agent_browser theme probe fails fast
+  # instead of hanging.
+  execute_code:
+    output_truncate: 20000
+    timeout: 90
   # design-system plugin: bind repo/ref/paths per-host in Settings — defaults point at
   # the reference protoContent layout (packages/design-system/dist/tokens.json,
   # packages/ui/src, docs/reference/visual-identity.md).
+  #
+  # ds_audit_repo ONBOARDING (uncomment + set to your org / workspace): the auditor only
+  # audits checkouts under `root` or a registered project. `root` MUST live INSIDE the
+  # agent workspace — NEVER ~/dev and NEVER your home directory (everything under root is
+  # treated as disposable working copies the auditor may clone into and re-sync).
+  # onboarding:
+  #   allow:
+  #     - github.com/<your-org>/*       # repos the auditor is allowed to clone
+  #   root: <workspace>/projects         # inside the agent workspace; NOT ~/dev, NOT $HOME
   #
   # Example builder delegate (uncomment + point at your gateway):
   # delegates:
@@ -74,6 +110,19 @@ config:                                              # recommended defaults (you
   #     description: >-
   #       Turn an approved prototype/design intent into a production component for your
   #       UI library — returns the component + its Storybook story, ready to review + PR.
+  #   # Peer PM board for the consuming APP repo (TWO-BOARD MODEL, see header comment).
+  #   # This agent owns the DS repos; protoEngineer owns the app repo and is reached a2a.
+  #   # Delegate app-side adoption of a shipped DS change here instead of PRing the app
+  #   # repo directly, and gate any consumer card that needs a DS release with
+  #   #   waits_for: npm:<pkg>@contains:<owner>/<repo>@<card-id>
+  #   - name: protoEngineer
+  #     type: a2a
+  #     url: http://your-protoengineer-host:8080    # a2a endpoint of the peer PM agent
+  #     description: >-
+  #       Peer PM agent that owns the consuming application repo. Route app-side adoption
+  #       of a shipped design-system change through here rather than opening app-repo PRs
+  #       directly; cross-repo consumers wait on the published package via
+  #       waits_for: npm:<pkg>@contains:<owner>/<repo>@<card-id>.
 
 # Agent archetype (ADR 0042) — presents this bundle as a "Design System Engineer"
 # agent type in the new-agent picker. Additive metadata.
