@@ -125,9 +125,13 @@ def test_two_board_model_documented_in_bundle_and_readme():
 def test_forbidden_model_family_absent():
     # Built from fragments so this guard's own source can't trip it.
     needle = "fa" + "ble"
+    # Scan repo SOURCE only — not VCS internals or generated caches. CPython constant-folds
+    # the needle above into a single literal inside the compiled .pyc pytest writes under
+    # __pycache__, so scanning that bytecode would trip the guard on itself.
+    skip_dirs = {".git", "__pycache__", ".pytest_cache"}
     offenders = []
     for path in REPO.rglob("*"):
-        if not path.is_file() or ".git" in path.parts:
+        if not path.is_file() or skip_dirs & set(path.parts) or path.suffix == ".pyc":
             continue
         try:
             body = path.read_text(errors="ignore")
@@ -136,6 +140,47 @@ def test_forbidden_model_family_absent():
         if needle in body.lower():
             offenders.append(str(path.relative_to(REPO)))
     assert not offenders, f"forbidden term found in: {offenders}"
+
+
+# ── r7: the roster the verify-bundle loader must resolve (install + load + probe) ──
+# scripts/verify_bundle.py installs the bundle against a protoAgent checkout, enables
+# `enabled` + members, and loads every one through the real loader — a member or builtin
+# that fails to resolve turns the job red ("<id>: not found by the loader"). These are the
+# deterministic, checkout-free preconditions for that run to have a chance of passing.
+_BUILTINS = ("delegates", "artifact", "agent_browser", "execute_code")
+_MEMBERS = ("design-system", "github")
+
+
+def test_builtins_resolve_as_builtins_not_members():
+    """A builtin must be spelled with its real id AND carry no url/ref — a url makes the
+    installer treat it as a member to clone (and then the loader can't find it)."""
+    bundle = _load_bundle()
+    for pid in _BUILTINS:
+        p = _plugin(bundle, pid)
+        assert p is not None, f"{pid} builtin not declared under plugins"
+        assert p.get("builtin") is True, f"{pid} must be builtin: true"
+        assert "url" not in p, f"{pid} is a builtin — it must not declare a url"
+        assert "ref" not in p, f"{pid} is a builtin — it must not declare a ref"
+
+
+def test_members_declare_url_and_ref():
+    """A member must carry url + ref so the installer fans it out at its floor pin."""
+    bundle = _load_bundle()
+    for pid in _MEMBERS:
+        p = _plugin(bundle, pid)
+        assert p is not None, f"{pid} member not declared under plugins"
+        assert p.get("builtin") is not True, f"{pid} is a member, not a builtin"
+        assert p.get("url"), f"{pid} member must declare a url to fan out"
+        assert p.get("ref"), f"{pid} member must declare a ref (a floor)"
+
+
+def test_enabled_covers_every_declared_plugin():
+    """verify_bundle.py enables `enabled` + members and loads each; every declared plugin
+    must be on the turn-on list so the loader actually exercises it (and none dangling)."""
+    bundle = _load_bundle()
+    declared = {p["id"] for p in bundle["plugins"]}
+    enabled = set(bundle["enabled"])
+    assert declared == enabled, f"declared vs enabled mismatch: {declared ^ enabled}"
 
 
 if __name__ == "__main__":
