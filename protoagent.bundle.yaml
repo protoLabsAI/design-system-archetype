@@ -63,8 +63,8 @@ plugins:
   - { id: artifact,  builtin: true }                                                    # generative UI — how prototypes are conveyed
   - { id: agent_browser, builtin: true }                                                # in-page probe — the auditing-a-site / theme_probe_script flows run here
   - { id: execute_code,  builtin: true }                                                # sandboxed runs — token extraction + audit scripts, no shell needed
-  - { id: design-system, url: https://github.com/protoLabsAI/design-system-plugin, ref: v0.10.0 }
-  - { id: github,        url: https://github.com/protoLabsAI/github-plugin,        ref: v0.8.0 }
+  - { id: design-system, url: https://github.com/protoLabsAI/design-system-plugin, ref: v0.11.0 }
+  - { id: github,        url: https://github.com/protoLabsAI/github-plugin,        ref: v0.9.0 }
 
 enabled: [delegates, artifact, agent_browser, execute_code, design-system, github]   # suggested turn-on list (you apply it)
 config:                                              # recommended defaults (you apply them)
