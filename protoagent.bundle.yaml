@@ -50,7 +50,7 @@ name: Design System Engineer
 # plugin-release.yml (.github/workflows/release.yml); protoAgent's bundle loader ignores it.
 # Bump it in the PR that ships the release, then merge as `chore: release vX.Y.Z` (or
 # run the Release workflow by hand).
-version: 0.2.0
+version: 0.3.0
 description: >-
   A design-system + frontend + accessibility engineer. It reads the design system
   LIVE (tokens, component inventory, visual-identity rules — never a stale copy),
@@ -68,8 +68,8 @@ plugins:
   - { id: artifact,  builtin: true }                                                    # generative UI — how prototypes are conveyed
   - { id: agent_browser, builtin: true }                                                # in-page probe — the auditing-a-site / theme_probe_script flows run here
   - { id: execute_code,  builtin: true }                                                # sandboxed runs — token extraction + audit scripts, no shell needed
-  - { id: design-system, url: https://github.com/protoLabsAI/design-system-plugin, ref: v0.10.0 }
-  - { id: github,        url: https://github.com/protoLabsAI/github-plugin,        ref: v0.8.0 }
+  - { id: design-system, url: https://github.com/protoLabsAI/design-system-plugin, ref: v0.16.0 }
+  - { id: github,        url: https://github.com/protoLabsAI/github-plugin,        ref: v0.9.3 }
 
 enabled: [delegates, artifact, agent_browser, execute_code, design-system, github]   # suggested turn-on list (you apply it)
 config:                                              # recommended defaults (you apply them)
