@@ -44,11 +44,11 @@ def _plugin(bundle: dict, pid: str) -> dict | None:
     return None
 
 
-# ── r1: design-system pinned at v0.9.0, single line, still bump-script-matchable ──
-def test_design_system_pinned_at_v0_9_0():
+# ── r1: design-system pinned at v0.16.0, single line, still bump-script-matchable ──
+def test_design_system_pinned_at_v0_16_0():
     ds = _plugin(_load_bundle(), "design-system")
     assert ds is not None, "design-system member missing"
-    assert ds["ref"] == "v0.9.0", f"expected ref v0.9.0, got {ds.get('ref')!r}"
+    assert ds["ref"] == "v0.16.0", f"expected ref v0.16.0, got {ds.get('ref')!r}"
 
 
 def test_member_lines_are_single_line_and_rewritable():
@@ -60,16 +60,16 @@ def test_member_lines_are_single_line_and_rewritable():
         m = cbu._MEMBER.match(line)
         if m:
             matched[m["id"]] = m["ref"]
-    assert matched.get("design-system") == "v0.9.0"
+    assert matched.get("design-system") == "v0.16.0"
     # github stays as-is; still a matchable single-line member.
-    assert matched.get("github") == "v0.7.0"
+    assert matched.get("github") == "v0.9.3"
 
 
-def test_v0_9_0_is_a_floor_not_an_exact_pin():
-    """0.x caret = minor boundary: v0.9.0 adopts v0.9.9 but never v0.10.0."""
+def test_v0_16_0_is_a_floor_not_an_exact_pin():
+    """0.x caret = minor boundary: v0.16.0 adopts v0.16.9 but never v0.17.0."""
     cbu = _member_regex()
-    assert cbu.is_compatible("v0.9.0", "v0.9.9") is True
-    assert cbu.is_compatible("v0.9.0", "v0.10.0") is False
+    assert cbu.is_compatible("v0.16.0", "v0.16.9") is True
+    assert cbu.is_compatible("v0.16.0", "v0.17.0") is False
 
 
 # ── r2: agent_browser + execute_code are builtins, enabled, with sandbox config ──
@@ -91,9 +91,29 @@ def test_execute_code_sandbox_defaults():
     assert cfg["timeout"] == 90
 
 
-# ── r5: verified_against bumped to the current protoAgent release ──
-def test_verified_against_is_current_release():
-    assert str(_load_bundle()["verified_against"]) == "0.184.1"
+# ── r5: verified_against names the protoAgent release the v0.16.0 pin set was verified on ──
+# design-system v0.16.0 declares min_protoagent_version 0.202.0 and its update_artifact
+# action rides protoAgent#4471 (write tools must be named in a subagent's own spec), which
+# first landed in core v0.213.0. So the verified-against floor is v0.213.0: older cores
+# either can't load the plugin (< 0.202.0) or lack the edit opt-in (< 0.213.0).
+_VERIFIED_AGAINST_FLOOR = (0, 213, 0)
+
+
+def _version_tuple(v: str) -> tuple:
+    return tuple(int(part) for part in str(v).split("."))
+
+
+def test_verified_against_is_the_verified_release():
+    assert str(_load_bundle()["verified_against"]) == "0.213.0"
+
+
+def test_verified_against_is_at_or_above_the_pr_4471_floor():
+    """Guards the #4471 contract: a future re-verify may bump this forward, but never
+    below v0.213.0 — the core that first both loads design-system v0.16.0 and ships #4471."""
+    got = _version_tuple(_load_bundle()["verified_against"])
+    assert got >= _VERIFIED_AGAINST_FLOOR, (
+        f"verified_against {got} is below the #4471 floor {_VERIFIED_AGAINST_FLOOR}"
+    )
 
 
 # ── r3: onboarding allow + root documented (root inside workspace, never ~/dev/home) ──

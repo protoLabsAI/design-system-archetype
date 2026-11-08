@@ -61,7 +61,11 @@ description: >-
 
 # The core version this exact pin set was last verified against (ADR 0049). The
 # verify workflow checks out this protoAgent ref for the smoke — bump on re-verify.
-verified_against: 0.184.1
+# 0.213.0 is the floor the v0.16.0 pin set needs: design-system v0.16.0 declares
+# min_protoagent_version 0.202.0, and its update_artifact action rides protoAgent#4471
+# (write tools must be named in a subagent's own spec), which first landed in core
+# v0.213.0 — so anything older can't load the plugin or honor the edit opt-in.
+verified_against: 0.213.0
 
 plugins:
   - { id: delegates, builtin: true }                                                    # builder delegates — the agent directs, they build
